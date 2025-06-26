@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
-from est_alan_scheduler.task import Task # Task 클래스 임포트
-from est_alan_scheduler.scheduler import registry, start_scheduler # 전역 registry와 start_scheduler 임포트
+from est_alan_scheduler.task import Task
+from est_alan_scheduler.task_registry import TaskRegistry
+from est_alan_scheduler.scheduler import start_scheduler
 
 def main():
     """
     est-alan-scheduler CLI의 메인 함수.
     데모용 작업을 등록하고 스케줄러를 시작합니다.
     """
+    registry = TaskRegistry()
+
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] est-alan-scheduler CLI 데모 시작...")
 
     # 예시 함수 정의

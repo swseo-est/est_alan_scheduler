@@ -25,6 +25,7 @@ class Task(BaseModel):
 
     # ── 식별자 ─────────────────────────────────────────────────────────
     id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    tags: List[str] = Field(default_factory=list)
 
     # ── 스케줄 옵션(하나만 선택) ─────────────────────────────────────
     every: Optional[Dict[str, int]] = None   # 예) {"minutes": 5}
@@ -42,8 +43,7 @@ class Task(BaseModel):
     last_success_at: Optional[datetime] = None  # 최근 성공 시각
     last_run_at: Optional[datetime] = None      # 최근 실행 시각(성공/실패 모두)
     result: Any = None
-    # error: Optional[Exception] = None # 변경 전
-    error_message: Optional[str] = None  # 변경 후: 예외 메시지 문자열 저장
+    error_message: Optional[str] = None  # 예외 메시지 문자열 저장
     history: List[Dict[str, Any]] = []
     # max_history_entries: int = 50 # 예시: history 크기 제한 옵션 (이번에는 미적용)
 
@@ -69,6 +69,23 @@ class Task(BaseModel):
             if not v: # 빈 딕셔너리 방지
                 raise ValueError("'every' field cannot be an empty dictionary.")
         return v
+
+    def update(self, task: Task):
+        self.tags = task.tags
+
+        # ── 스케줄 옵션(하나만 선택) ─────────────────────────────────────
+        self.every = task.every
+        self.at = task.at
+        self.run_at = task.run_at
+
+        # ── 실행 정의 ───────────────────────────────────────────────────
+        self.func = task.func
+        self.args = task.args
+        self.kwargs = task.kwargs
+        self.depends_on = task.depends_on
+
+        # ── 런타임 상태(자동 관리) ─────────────────────────────────────
+        # 해당 정보는 기존 정보를 그대로 가져옴
 
 
 

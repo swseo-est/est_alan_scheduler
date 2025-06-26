@@ -15,9 +15,6 @@ class TaskRegistry:
 
     def register(self, task: Task) -> Task:
         """작업 등록. 스케줄 옵션은 하나만 지정돼야 한다."""
-        # 스케줄 옵션 유효성 검사는 Task 모델의 validator 또는 여기서 수행
-        # Task 모델에 validator가 이미 있다면 여기서 중복 검사 안 해도 됨.
-        # 여기서는 명시적으로 한번 더 체크 (Task 생성시 옵션이 없을 수도 있으므로)
         with self._lock:
             if sum(opt is not None for opt in (task.every, task.at, task.run_at)) != 1:
                 raise ValueError("Task must specify exactly one of every / at / run_at schedule options")
@@ -26,6 +23,17 @@ class TaskRegistry:
                 raise ValueError(f"Task with id '{task.id}' already registered.")
             self.store[task.id] = task
             return task
+
+    def update(self, task: Task):
+        with self._lock:
+            if sum(opt is not None for opt in (task.every, task.at, task.run_at)) != 1:
+                raise ValueError("Task must specify exactly one of every / at / run_at schedule options")
+            self.store[task.id].update(task)
+
+    def delete(self, task_id):
+        with self._lock:
+            if task_id in self.store.keys():
+                del self.store[task_id]
 
     # ── 내부 유틸 ───────────────────────────────────────────────────
 
@@ -56,9 +64,6 @@ class TaskRegistry:
         if task.run_at is not None:
             if task.last_run_at is None and now >= task.run_at:
                 run_condition = True
-            # 참고: 성공 여부와 관계없이 한 번만 실행 시도.
-            # 만약 '성공할 때까지 재시도'가 필요하다면, task.status != TaskStatus.SUCCESS 조건과
-            # 실패 시 run_at 시간을 미래로 조정하는 등의 추가 로직이 필요. 현재 스펙은 1회 시도.
 
         # 2) 매일 고정 시각(at) - 지정된 시간이 되었고, 오늘 아직 실행 시도 안 했으면 실행
         elif task.at is not None:
@@ -89,8 +94,6 @@ class TaskRegistry:
             # print(f"Warning: Task {task.id} is missing a schedule option.") # 실제로는 로거 사용
             pass # run_condition remains False
 
-        # 중요: 이 함수는 더 이상 task.status를 PENDING으로 바꾸지 않음.
-        # 상태 변경은 tick 메서드에서 _should_run과 _deps_ready 결과에 따라 수행.
         return run_condition
 
     # _execute는 _execute_task_logic으로 대체/수정될 예정
