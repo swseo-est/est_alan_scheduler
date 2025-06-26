@@ -150,10 +150,12 @@ if __name__ == "__main__":
 
 -   **주요 메서드**:
     -   `register(task: Task) -> Task`: 새로운 작업을 레지스트리에 등록합니다. 스케줄 옵션이 정확히 하나만 지정되었는지 확인합니다.
+    -   `add_task_dynamically(task: Task) -> Task`: 실행 중인 스케줄러에 동적으로 작업을 추가합니다. `register`와 유사한 유효성 검사를 수행합니다.
+    -   `remove_task_dynamically(task_id: str) -> bool`: 실행 중인 스케줄러에서 동적으로 작업을 제거합니다. 성공 시 `True`, 작업이 없으면 `False`를 반환합니다.
     -   `tick()`: 스케줄러 루프의 각 간격마다 호출됩니다. 모든 등록된 작업을 순회하며 다음을 수행합니다:
         -   `_should_run(task: Task, now: datetime) -> bool`: 현재 시간을 기준으로 작업의 시간 조건 ( `every`, `at`, `run_at`)이 충족되었는지 판단합니다.
         -   `_deps_ready(task: Task) -> bool`: 작업의 `depends_on`에 명시된 모든 선행 작업들이 한 번 이상 성공했는지 확인합니다.
-        -   `_execute(task: Task)`: 시간 조건과 의존성 조건이 모두 충족된 작업을 실행합니다. 실행 중 상태를 `RUNNING`으로 변경하고, 실행 후 결과를 바탕으로 `SUCCESS` 또는 `FAILED`로 상태를 업데이트하며, `result`, `error`, `last_run_at`, `last_success_at`, `history` 등의 정보를 기록합니다. 선행 작업의 결과는 `dep_<task_id>` 형태의 키워드 인자로 전달됩니다.
+        -   `_execute_task_logic(task: Task, dep_kwargs: Dict[str, Any], current_run_time: datetime)`: (내부 메서드, `_execute`에서 이름 변경됨) 시간 조건과 의존성 조건이 모두 충족된 작업을 실행합니다. 실행 중 상태를 `RUNNING`으로 변경하고, 실행 후 결과를 바탕으로 `SUCCESS` 또는 `FAILED`로 상태를 업데이트하며, `result`, `error_message`, `last_run_at`, `last_success_at`, `history` 등의 정보를 기록합니다. 선행 작업의 결과는 `dep_<task_id>` 형태의 키워드 인자로 전달됩니다.
 
 ### `scheduler` (`est_alan_scheduler/scheduler.py`)
 

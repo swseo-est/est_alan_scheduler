@@ -471,6 +471,109 @@ def test_tick_handles_dependency_data_preparation_failure(registry: TaskRegistry
     # assert "Dependency data not found during tick" in main_task.error_message
     pytest.skip("This specific defensive code in tick is hard to trigger reliably in tests.")
 
+# ─────────────────── 동적 작업 관리 테스트 (add_task_dynamically, remove_task_dynamically) ─────
+
+def test_add_task_dynamically_success(registry: TaskRegistry):
+    """add_task_dynamically: 성공적인 작업 추가 테스트"""
+    task = create_mock_task(id="dynamic_add_1", every={"seconds": 10})
+    added_task = registry.add_task_dynamically(task)
+    assert added_task == task
+    assert task.id in registry.store
+    assert registry.store[task.id] == task
+
+def test_add_task_dynamically_duplicate_id_fails(registry: TaskRegistry):
+    """add_task_dynamically: 중복 ID 작업 추가 시 ValueError 발생 테스트"""
+    task1 = create_mock_task(id="dynamic_dup_id", every={"seconds": 5})
+    registry.register(task1) # 먼저 하나 등록
+    task2 = create_mock_task(id="dynamic_dup_id", at="10:00")
+    with pytest.raises(ValueError, match="Task with id 'dynamic_dup_id' already registered."):
+        registry.add_task_dynamically(task2)
+
+def test_add_task_dynamically_invalid_schedule_no_option(registry: TaskRegistry):
+    """add_task_dynamically: 스케줄 옵션 없는 작업 추가 시 ValueError 발생 테스트"""
+    task_invalid = Task(func=lambda: "no schedule", id="dyn_invalid_1")
+    with pytest.raises(ValueError, match="Task must specify exactly one of every / at / run_at"):
+        registry.add_task_dynamically(task_invalid)
+
+def test_add_task_dynamically_invalid_schedule_multiple_options(registry: TaskRegistry):
+    """add_task_dynamically: 여러 스케줄 옵션 작업 추가 시 ValueError 발생 테스트"""
+    task_invalid = Task(
+        id="dyn_invalid_2",
+        every={"seconds": 10},
+        at="12:00",
+        func=lambda: "multiple schedules"
+    )
+    with pytest.raises(ValueError, match="Task must specify exactly one of every / at / run_at"):
+        registry.add_task_dynamically(task_invalid)
+
+def test_remove_task_dynamically_existing_task(registry: TaskRegistry):
+    """remove_task_dynamically: 존재하는 작업 제거 성공 및 True 반환 테스트"""
+    task_id = "dynamic_remove_1"
+    task = create_mock_task(id=task_id, every={"seconds": 10})
+    registry.register(task)
+    assert task_id in registry.store
+
+    result = registry.remove_task_dynamically(task_id)
+    assert result is True
+    assert task_id not in registry.store
+
+def test_remove_task_dynamically_non_existing_task(registry: TaskRegistry):
+    """remove_task_dynamically: 존재하지 않는 작업 제거 시 False 반환 테스트"""
+    result = registry.remove_task_dynamically("non_existent_task_id")
+    assert result is False
+
+@freeze_time("2024-01-01 10:00:00")
+def test_dynamically_added_task_is_executed(registry: TaskRegistry):
+    """동적으로 추가된 작업이 tick에 의해 실행되는지 테스트"""
+    mock_func_dynamic = MagicMock()
+    dynamic_task_id = "dyn_exec_task"
+    # 10:00:05 에 실행되도록 설정
+    task_to_add = create_mock_task(id=dynamic_task_id, run_at=datetime(2024, 1, 1, 10, 0, 5), func=mock_func_dynamic)
+
+    # 초기 tick (아직 작업 없음)
+    registry.tick()
+    mock_func_dynamic.assert_not_called()
+
+    # 작업 동적 추가
+    registry.add_task_dynamically(task_to_add)
+    assert dynamic_task_id in registry.store
+
+    # 시간 진행 없이 바로 tick -> 아직 실행 시간 안됨
+    registry.tick() # 현재시간 10:00:00
+    mock_func_dynamic.assert_not_called()
+
+    # 시간 진행하여 실행 시간이 되도록 함
+    with freeze_time("2024-01-01 10:00:05"):
+        registry.tick() # 현재시간 10:00:05
+        mock_func_dynamic.assert_called_once()
+        assert registry.store[dynamic_task_id].status == TaskStatus.SUCCESS
+
+@freeze_time("2024-01-01 10:00:00")
+def test_dynamically_removed_task_is_not_executed(registry: TaskRegistry):
+    """동적으로 제거된 작업이 더 이상 tick에 의해 실행되지 않는지 테스트"""
+    mock_func_removed = MagicMock()
+    removed_task_id = "dyn_removed_task"
+    # 10:00:05 에 실행되도록 설정된 작업
+    task_to_remove = create_mock_task(id=removed_task_id, run_at=datetime(2024, 1, 1, 10, 0, 5), func=mock_func_removed)
+    registry.register(task_to_remove)
+
+    # 작업 제거
+    assert registry.remove_task_dynamically(removed_task_id) is True
+    assert removed_task_id not in registry.store
+
+    # 시간을 진행시켜 원래 실행되었어야 할 시간으로 이동
+    with freeze_time("2024-01-01 10:00:05"):
+        registry.tick() # 현재시간 10:00:05
+        mock_func_removed.assert_not_called() # 작업이 제거되었으므로 호출되지 않아야 함
+
+    # 제거 후 다시 추가하고 실행되는지 확인 (선택적 심화 테스트)
+    readded_task = create_mock_task(id=removed_task_id, run_at=datetime(2024, 1, 1, 10, 0, 10), func=mock_func_removed)
+    registry.add_task_dynamically(readded_task)
+
+    with freeze_time("2024-01-01 10:00:10"):
+        registry.tick()
+        mock_func_removed.assert_called_once() # 이제는 호출되어야 함 (새로 추가된 작업)
+
 
 if __name__ == '__main__':
     pytest.main(["-v", __file__])

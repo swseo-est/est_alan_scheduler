@@ -123,6 +123,34 @@ class TaskRegistry:
             )
             # TODO: history 크기 제한 로직 (필요시 Task 모델에 max_history_entries 추가 후 여기서 처리)
 
+    # ── 동적 작업 관리 API ───────────────────────────────────────────
+
+    def add_task_dynamically(self, task: Task) -> Task:
+        """
+        실행 중인 스케줄러에 동적으로 작업을 추가합니다.
+        register와 유사한 유효성 검사를 수행합니다.
+        """
+        with self._lock:
+            if sum(opt is not None for opt in (task.every, task.at, task.run_at)) != 1:
+                raise ValueError("Task must specify exactly one of every / at / run_at schedule options")
+            if task.id in self.store:
+                raise ValueError(f"Task with id '{task.id}' already registered.")
+            self.store[task.id] = task
+            # print(f"Task {task.id} added dynamically at {datetime.now()}.") # 로깅 필요시
+            return task
+
+    def remove_task_dynamically(self, task_id: str) -> bool:
+        """
+        실행 중인 스케줄러에서 동적으로 작업을 제거합니다.
+        성공적으로 제거하면 True, 해당 ID의 작업이 없으면 False를 반환합니다.
+        """
+        with self._lock:
+            if task_id in self.store:
+                del self.store[task_id]
+                # print(f"Task {task_id} removed dynamically at {datetime.now()}.") # 로깅 필요시
+                return True
+            return False
+
     # ── 루프 한 틱마다 호출 ──────────────────────────────────────────
 
     def tick(self):

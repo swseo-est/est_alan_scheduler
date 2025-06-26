@@ -24,6 +24,12 @@ def main():
         print(f"[{timestamp}] CLI Failing Task: 이 작업은 의도적으로 실패합니다.")
         raise RuntimeError("CLI 데모용 의도된 실패")
 
+    def cli_use_dependency_result(message_prefix: str, dep_cli_run_at_12s): # 관례에 따라 의존성 결과 인자명 사용
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        # dep_cli_run_at_12s는 'cli_run_at_12s' 작업의 결과값을 받게 됩니다.
+        print(f"[{timestamp}] CLI Use Result Task: {message_prefix} {dep_cli_run_at_12s}")
+        return f"Processed dependency result: {dep_cli_run_at_12s}"
+
     # Task 등록
     task1_cli = Task(
         every={"seconds": 7},
@@ -62,6 +68,19 @@ def main():
     )
     registry.register(task4_cli_failing)
 
+    # 작업 간 데이터 공유 예시 Task
+    # task2_cli (cli_run_at_12s)가 실행된 후, 그 결과를 받아 사용
+    task5_cli_use_result_time = datetime.now() + timedelta(seconds=22) # task2_cli 이후 실행되도록 시간 설정
+    task5_cli_use_result = Task(
+        run_at=task5_cli_use_result_time,
+        func=cli_use_dependency_result,
+        args=("The result from cli_run_at_12s was:",), # 첫 번째 인자 (message_prefix)
+        # 'dep_cli_run_at_12s'는 TaskRegistry에 의해 자동으로 kwargs로 전달됨
+        id="cli_use_result_task_22s",
+        depends_on=[task2_cli.id] # task2_cli.id는 "cli_run_at_12s"
+    )
+    registry.register(task5_cli_use_result)
+
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] 등록된 CLI 작업들:")
     with registry._lock: # 스레드 안전하게 접근
         for task_id, task_obj in registry.store.items():
@@ -71,6 +90,7 @@ def main():
                        f"{'every ' + str(task_obj.every) if task_obj.every else ''}"
                        f"{'at ' + str(task_obj.at) if task_obj.at else ''}"
                        f"{'run_at ' + str(task_obj.run_at) if task_obj.run_at else ''}"
+                       f", Depends: {task_obj.depends_on if task_obj.depends_on else 'None'}" # 의존성 정보 추가
                        f")")
 
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] 스케줄러를 blocking 모드로 시작합니다. (Ctrl+C 로 종료)")

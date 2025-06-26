@@ -64,7 +64,8 @@ def test_main_registers_demo_tasks(mock_print): # Removed mock_main_start_schedu
         "cli_every_7s",
         "cli_run_at_12s",
         "cli_at_daily",
-        "cli_failing_18s"
+        "cli_failing_18s",
+        "cli_use_result_task_22s" # 새로 추가된 작업 ID
     ]
 
     assert len(global_registry.store) == len(expected_task_ids)
@@ -78,7 +79,8 @@ def test_main_registers_demo_tasks(mock_print): # Removed mock_main_start_schedu
     assert task1.every == {"seconds": 7}
     assert task1.args == ("Hello from CLI every 7s",)
 
-    task2 = global_registry.store["cli_run_at_12s"]
+    task2_id = "cli_run_at_12s"
+    task2 = global_registry.store[task2_id]
     assert task2.run_at is not None
     # run_at 시간은 datetime.now() 기준으로 설정되므로 정확한 값 비교는 어려움
     # 대신 타입이나 None이 아닌지만 확인
@@ -96,6 +98,13 @@ def test_main_registers_demo_tasks(mock_print): # Removed mock_main_start_schedu
     # func 이름으로 간접 확인 (task.func.__name__)
     assert task4.func.__name__ == "cli_failing_task"
 
+    task5 = global_registry.store["cli_use_result_task_22s"]
+    assert task5.run_at is not None
+    assert isinstance(task5.run_at, datetime)
+    assert task5.func.__name__ == "cli_use_dependency_result"
+    assert task5.args == ("The result from cli_run_at_12s was:",)
+    assert task5.depends_on == [task2_id] # "cli_run_at_12s" 작업에 의존
+
 
 # main.py 내에 정의된 실제 함수들이 Task에 잘 할당되는지 확인
 # (위의 테스트에서 func.__name__으로 일부 확인했지만, 좀 더 명시적으로)
@@ -112,6 +121,7 @@ def test_main_task_functions_are_correctly_assigned(mock_print): # Removed mock_
     task_sample = global_registry.store.get("cli_every_7s")
     task_another = global_registry.store.get("cli_run_at_12s")
     task_failing = global_registry.store.get("cli_failing_18s")
+    task_use_result = global_registry.store.get("cli_use_result_task_22s") # 새로 추가된 작업
 
     assert task_sample is not None and task_sample.func.__name__ == "cli_sample_task"
     assert task_another is not None and task_another.func.__name__ == "cli_another_task"
@@ -120,6 +130,7 @@ def test_main_task_functions_are_correctly_assigned(mock_print): # Removed mock_
     assert task_at_daily is not None and task_at_daily.func.__name__ == "cli_sample_task"
 
     assert task_failing is not None and task_failing.func.__name__ == "cli_failing_task"
+    assert task_use_result is not None and task_use_result.func.__name__ == "cli_use_dependency_result" # 새 작업 함수 검증
 
     # 실제 함수 실행 테스트 (선택적, TaskRegistry 테스트에서 더 자세히 다룸)
     # 여기서는 함수가 올바르게 할당되었는지만 확인
