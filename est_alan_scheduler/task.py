@@ -3,9 +3,9 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 # ────────────────────────────────────────────────────────────────────────
 # 모델 정의
@@ -42,8 +42,33 @@ class Task(BaseModel):
     last_success_at: Optional[datetime] = None  # 최근 성공 시각
     last_run_at: Optional[datetime] = None      # 최근 실행 시각(성공/실패 모두)
     result: Any = None
-    error: Optional[Exception] = None
+    # error: Optional[Exception] = None # 변경 전
+    error_message: Optional[str] = None  # 변경 후: 예외 메시지 문자열 저장
     history: List[Dict[str, Any]] = []
+    # max_history_entries: int = 50 # 예시: history 크기 제한 옵션 (이번에는 미적용)
+
+    @validator('at')
+    def validate_at_format(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            try:
+                # 시간 문자열을 datetime.time 객체로 파싱 시도
+                datetime.strptime(v, "%H:%M").time()
+            except ValueError:
+                raise ValueError("at field must be in HH:MM format")
+        return v
+
+    @validator('every')
+    def validate_every_keys(cls, v: Optional[Dict[str, int]]) -> Optional[Dict[str, int]]:
+        if v is not None:
+            allowed_keys = {"days", "seconds", "microseconds", "milliseconds", "minutes", "hours", "weeks"}
+            for key_present in v.keys():
+                if key_present not in allowed_keys:
+                    raise ValueError(
+                        f"Invalid key '{key_present}' in 'every' field. Allowed keys are: {allowed_keys}"
+                    )
+            if not v: # 빈 딕셔너리 방지
+                raise ValueError("'every' field cannot be an empty dictionary.")
+        return v
 
 
 
