@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from est_alan_scheduler.task import Task
-from est_alan_scheduler.task_registry import TaskRegistry, registry
-from est_alan_scheduler.scheduler import start_scheduler
+from est_alan_scheduler.scheduler import start_scheduler, registry
 
 
 def main():
