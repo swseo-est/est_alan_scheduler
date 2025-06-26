@@ -1,0 +1,2 @@
+[console_scripts]
+est-alan-scheduler = est_alan_scheduler.main:main

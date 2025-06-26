@@ -2,7 +2,7 @@
 name = "est-alan-scheduler"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.11.7",
 ]
@@ -12,3 +12,30 @@ packages = ["est_alan_scheduler"]
 
 [project.scripts]
 est-alan-scheduler = "est_alan_scheduler.main:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "freezegun>=1.4.0",
+]
+
+[tool.pytest.ini_options]
+python_files = "test_*.py tests_*.py"
+# python_paths = ["."] # Remove this line, as it causes a warning and might not be effective
+addopts = "--cov=est_alan_scheduler --cov-report=term-missing --cov-report=html --cov-fail-under=90"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning", # 필요에 따라 추가/수정
+]
+
+[tool.coverage.run]
+source = ["est_alan_scheduler"]
+omit = ["tests/*", "est_alan_scheduler/main.py"] # main.py는 직접 테스트보다 통합 테스트 일부로 커버
+
+[tool.coverage.report]
+# fail_under = 90 # addopts로 이동
+show_missing = true
+skip_covered = true
