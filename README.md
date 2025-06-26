@@ -27,6 +27,42 @@ pip install .
 ```
 `pyproject.toml`에 정의된 의존성(`pydantic`)이 함께 설치됩니다.
 
+## 개발 및 테스트
+
+이 프로젝트의 개발에 참여하거나 테스트를 직접 실행하려면 다음 단계를 따르세요.
+
+### 개발 환경 설정
+
+1.  먼저, 위 "설치 방법"에 따라 프로젝트를 로컬에 클론합니다.
+2.  프로젝트 루트 디렉토리에서 다음 명령어를 실행하여 개발 의존성 (테스트 도구 포함)을 설치합니다:
+    ```bash
+    pip install -e .[test]
+    ```
+    이렇게 하면 `pytest`, `pytest-cov` (코드 커버리지 측정), `freezegun` (시간 제어) 등의 패키지가 설치됩니다.
+
+### 테스트 실행
+
+모든 단위 테스트 및 통합 테스트를 실행하려면 프로젝트 루트 디렉토리에서 다음 명령어를 사용하세요:
+
+```bash
+python -m pytest
+```
+
+또는 좀 더 상세한 출력을 원하시면:
+
+```bash
+python -m pytest -v
+```
+
+### 코드 커버리지 확인
+
+테스트 실행 후 코드 커버리지를 확인하려면 다음 명령어를 사용합니다. `pyproject.toml` 파일에 설정된 대로, 커버리지가 90% 미만이면 명령이 실패합니다.
+
+```bash
+python -m pytest --cov=est_alan_scheduler
+```
+(참고: `pyproject.toml`의 `[tool.pytest.ini_options].addopts`에 이미 coverage 관련 설정이 포함되어 있으므로, 단순 `python -m pytest` 실행으로도 커버리지 보고가 이루어질 수 있습니다. HTML 보고서는 `htmlcov/` 디렉토리에 생성됩니다.)
+
 ## 사용 예시
 
 다음은 `est_alan_scheduler`를 사용하여 몇 가지 작업을 스케줄링하는 예시입니다. 이 코드는 프로젝트 루트의 `est_alan_scheduler/scheduler.py` 파일 내의 예시 코드를 기반으로 합니다.
@@ -84,7 +120,6 @@ if __name__ == "__main__":
 ```
 
 위 코드를 `example.py`와 같은 파일로 저장하고 실행(`python example.py`)하면, `add` 함수가 5초마다 호출되고, `task1`이 성공적으로 한 번 실행된 후 지정된 시간에 `multiply` 함수가 (매일 그 시간에) 호출됩니다. `log_message` 함수는 30초 후에 한 번 실행됩니다.
-(참고: `scheduler.py` 파일을 직접 실행해도 동일한 예시를 확인할 수 있습니다.)
 
 ## 주요 구성 요소
 
