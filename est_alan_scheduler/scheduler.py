@@ -3,7 +3,15 @@ import time
 import threading
 
 
-def start_scheduler(registry: TaskRegistry, interval: float = 1.0, blocking: bool = False):
+#  전역 인스턴스
+registry = TaskRegistry()
+
+
+# ────────────────────────────────────────────────────────────────────────
+# 백그라운드 루프
+# ────────────────────────────────────────────────────────────────────────
+
+def start_scheduler(interval: float = 1.0, blocking: bool = False):
     """interval(기본 1초)마다 registry.tick() 실행"""
 
     def loop():

@@ -1,12 +1,10 @@
 from datetime import datetime, timedelta
 from est_alan_scheduler.task import Task
-from est_alan_scheduler.task_registry import TaskRegistry
+from est_alan_scheduler.task_registry import TaskRegistry, registry
 from est_alan_scheduler.scheduler import start_scheduler
 
 
 def main():
-    registry = TaskRegistry()
-
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] est-alan-crawl-agent 데모 시작...")
 
     # 예시 함수 정의
@@ -19,6 +17,7 @@ def main():
         alan_task.task_id = notion_task.task_id
         alan_task.tags.append("notion_task")
         # do something
+        # crawl and send
         return alan_task
 
     def sync_task_with_notion():
